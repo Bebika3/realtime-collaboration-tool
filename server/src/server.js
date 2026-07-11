@@ -35,6 +35,22 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake?.auth?.token;
+    if (!token) return next(new Error('Missing auth token'));
+
+    const jwt = require('jsonwebtoken');
+    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, decoded) => {
+      if (err) return next(new Error('Invalid auth token'));
+      socket.user = decoded;
+      return next();
+    });
+  } catch (e) {
+    return next(new Error('Auth failed'));
+  }
+});
+
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
@@ -42,8 +58,12 @@ io.on('connection', (socket) => {
     collaborationHandler.handleJoinDocument(io, socket, data);
   });
 
-  socket.on('edit-document', (data) => {
-    collaborationHandler.handleEditDocument(io, socket, data);
+  socket.on('edit-document-content', (data) => {
+    collaborationHandler.handleEditDocumentContent(io, socket, data);
+  });
+
+  socket.on('yjs-update', (data) => {
+    collaborationHandler.handleYjsUpdate(io, socket, data);
   });
 
   socket.on('cursor-move', (data) => {
@@ -53,6 +73,7 @@ io.on('connection', (socket) => {
   socket.on('chat-message', (data) => {
     collaborationHandler.handleChatMessage(io, socket, data);
   });
+
 
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
