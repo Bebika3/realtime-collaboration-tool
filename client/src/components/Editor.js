@@ -7,16 +7,16 @@ function Editor({ documentId, userId }) {
   const ydocRef = useRef(null);
   const ytextRef = useRef(null);
 
-  const { getYjsDoc, sendLocalUpdate, content, isConnected } = useCollaborationStore();
+  const { sendLocalUpdate, content, isConnected } = useCollaborationStore();
 
-
+  // Local Yjs doc for this editor instance.
   const [localText, setLocalText] = useState(content);
 
-  // Create Yjs structures once per component mount.
   if (!ydocRef.current) {
     ydocRef.current = new Y.Doc();
     ytextRef.current = ydocRef.current.getText('content');
   }
+
 
   // Keep textarea in sync with Y.Text.
   useEffect(() => {
@@ -33,27 +33,22 @@ function Editor({ documentId, userId }) {
     return () => ytext.unobserve(updateLocalState);
   }, []);
 
-  // Receive initial/remote content via store (server sends it by applying a persisted Yjs state).
+  // Bootstrap/keep local Yjs state aligned with the store's materialized `content`.
+  // (The store updates its `content` based on remote Yjs updates coming from the server.)
   useEffect(() => {
-    const ydoc = ydocRef.current;
     const ytext = ytextRef.current;
+    if (typeof content !== 'string') return;
 
-    // If store already has a materialized content string, initialize local Yjs text.
-    // (Store keeps `content` updated for backwards compatibility and UI metrics.)
-    if (typeof content === 'string' && ytext.length === 0 && content.length > 0) {
-      ydoc.transact(() => {
-        ytext.insert(0, content);
-      });
-    }
+    // If the incoming remote materialized content differs, replace local Yjs text.
+    const current = ytext.toString();
+    if (current === content) return;
 
-    // When store provides a Yjs doc, we can mirror its content into our local doc.
-    const storeYDoc = getYjsDoc?.(documentId);
-    if (storeYDoc && storeYDoc !== ydoc) {
-      // Apply full state once for bootstrap; afterwards we rely on update events.
-      const state = Y.encodeStateAsUpdate(storeYDoc);
-      Y.applyUpdate(ydoc, state);
-    }
-  }, [documentId, content, getYjsDoc]);
+    ytext.doc.transact(() => {
+      ytext.delete(0, ytext.length);
+      if (content.length > 0) ytext.insert(0, content);
+    });
+  }, [documentId, content]);
+
 
   // Listen to local Yjs changes and send updates to server.
   useEffect(() => {
@@ -69,14 +64,8 @@ function Editor({ documentId, userId }) {
     };
   }, [documentId, sendLocalUpdate]);
 
-  // Apply remote updates into Yjs doc.
-  useEffect(() => {
-    // Store will call applyRemoteUpdate when it receives updates from server.
-    // This component just reflects Yjs text; no extra wiring needed here.
-    void applyRemoteUpdate;
-  }, [applyRemoteUpdate]);
-
   const handleTextareaChange = (e) => {
+
     const value = e.target.value;
     const ytext = ytextRef.current;
 

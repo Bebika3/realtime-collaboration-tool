@@ -19,6 +19,7 @@
 
 - [x] Step 5a: Fix client Buffer/base64 conversion for Yjs updates
 
-- [ ] Step 6: Run and verify basic multi-user collaboration manually
+- [x] Step 6: Run and verify basic multi-user collaboration manually
 - [ ] Step 7: Update documentation
+
 
