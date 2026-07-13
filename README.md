@@ -19,7 +19,7 @@ The application follows a client-server architecture:
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Bebika3/realtime-collaboration-tool.git
+   git clone https://github.com/bagmitapokhrel/realtime-collaboration-tool.git
    cd realtime-collaboration-tool
    ```
 2. Install dependencies for both client and server:
